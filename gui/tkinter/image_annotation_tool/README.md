@@ -3,6 +3,8 @@
 To quickly annotate an image with a text that can be modified, resized, rotated, colorized
 My wife use it to annotate pictures of her clothes for Vinted…  
 
+![App Screenshoot](image_annotation_tool_screenshoot.png)
+
 ## Usage
 	
 Interface is self-explanatory  
