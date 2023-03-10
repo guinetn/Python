@@ -22,9 +22,7 @@ Interface is self-explanatory
 - Move the text with the keyboard arrow keys (+shift to slow down)
 - Save image (overwrite dropped image or create a new one)
 
-* Command line options
-
-Load an image at app's startup
+Command line options
 
 	>image_annotation_tool.py
 	>image_annotation_tool.py "c:\users\joe\my_image.png"
