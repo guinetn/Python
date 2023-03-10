@@ -1,187 +1,202 @@
-﻿from tkinter import *
-from tkinter import colorchooser
-from tkinterdnd2 import *
-from PIL import ImageTk, ImageGrab
-import os
+﻿from tkinter import colorchooser
+from tkinter import StringVar, IntVar, DoubleVar, Frame, Label, Canvas, Entry, Button, Checkbutton, Scale, PhotoImage, NW, LEFT, HORIZONTAL
+from tkinterdnd2 import TkinterDnD, DND_FILES
+from PIL import ImageTk, ImageGrab # Pillow ImageTk: to have more image formats 
+import sys, os, datetime
 
 """
-IMAGE ANNOTATION TOOL: annotate images
+IMAGE ANNOTATION TOOL
+
+To annotate an image with a text that can be modified, resized, rotated, colorized
+My wife use it to annotate pictures of her clothes for Vinted…  
+
+Usage:
+
 """
 
-DEFAULT_TEXT = "Offert pour tout achat"
-BG_SETTINGS = '#555555'
-SHIFT_KEYS = {"Shift_L", "Shift_R"}
+__version__ = "0.0.1"
+__author__ = "Nicols Guinet <nguinet.pro AT gmail.com>"
 
-is_shift_pressed = False
+class App:
 
-def Draw():
-    canvas.itemconfig(textAddedWidget, 
-                      text= text_to_add.get(),
-                      angle=angleOfRotation.get(),
-                      fill=text_color.get(), 
-                      font=('calibri', 
-                      fontsize.get(), 'bold'))
+    DEFAULT_TEXT = "Offert pour tout achat"
+    DEFAULT_BG_SETTINGS = '#555555'
+    SHIFT_KEYS = {"Shift_L", "Shift_R"}
+    IS_SHIFT_PRESSED = False
 
-def DropImage(event):
-    global img          # avoid img to be garbage collected
-
-    droppedItem.set(event.data)
-    currentFile.set(droppedItem.get())
-    img = ImageTk.PhotoImage(file = currentFile.get()) # "./Images/source.png"    "C:\\temp\\F14-01.png"
-
-    # resize canvas to image size
-    canvas.config(width=img.width(), height=img.height())
-
-    canvas_img = canvas.create_image(0,0, anchor=NW, image=img)
-    # z-order: image must be below foreground elements
-    canvas.tag_lower(canvas_img)
-
-    Draw()
-
-
-window = TkinterDnD.Tk()
-window.title('ADD TEXT TO AN IMAGE')
-window.geometry('700x700')
-window.config(bg='grey')
-
-droppedItem = StringVar()
-currentFile = StringVar()
-text_x = IntVar()
-text_x.set(150)
-text_y = IntVar()
-text_y.set(100)
-
-canvas = Canvas(window, width=600, height=400)
-canvas.configure(bg='#333333')
-textAddedWidget = canvas.create_text(200, 150, text="DRAG IMAGE HERE", anchor="nw", fill='red', font='calibri 20 bold')
-canvas.pack(fill=None, expand=False, pady=10)
-
-canvas.drop_target_register(DND_FILES)
-canvas.dnd_bind('<<Drop>>', DropImage)
-
-
-# USER SETTINGS AREA
-
-settingsArea = Frame(window, bg=BG_SETTINGS)
-settingsArea.pack() 
-
-# USER TEXT
-text_to_add = StringVar()
-
-def update_text(e):
-    Draw()
-   
-lText = Label(settingsArea, text="TEXT", bg=BG_SETTINGS, fg='White')
-lText.grid(row=0,column=0 , padx=10)
-textbox = Entry(settingsArea, width=30, fg='blue', font=("calibri", 18), textvariable=text_to_add)
-textbox.insert(0, DEFAULT_TEXT)
-textbox.grid(row=0,column=1 , padx=10, pady=10)
-textbox.bind("<FocusIn>", update_text)
-
-
-
-
-
-# USER IMAGE PARAMS
-
-imagePropertiesArea = Frame(settingsArea, bg=BG_SETTINGS)
-imagePropertiesArea.grid(row=1,columnspan=3, padx=30, pady=10)
-
-def choose_color():
-    color_code = colorchooser.askcolor(title ="Choose color")
-    text_color.set(color_code[1])
-
-# USER TEXT COLOR
-text_color = StringVar()
-text_color.set('red')
-text_color.trace("w", lambda name, index,mode, var=text_color: update_text(text_color))
-
-color_button = Button(imagePropertiesArea, text = "Color", command = choose_color)
-color_button.pack(side = LEFT, padx=20, pady=5)
-
-# USER TEXT ROTATION
-lRotation = Label(imagePropertiesArea, text="Rotation", bg=BG_SETTINGS, fg='White')
-lRotation.pack(side = LEFT, padx=5)
-angleOfRotation = DoubleVar()
-angleOfRotation.set(-21)
-rotation_slider = Scale(imagePropertiesArea, variable = angleOfRotation, from_ = -90, to = 90, orient = HORIZONTAL) 
-rotation_slider.pack(side = LEFT, padx=20)
-
-# USER FONT SIZE
-lFontsize = Label(imagePropertiesArea, text="Text Size", bg=BG_SETTINGS, fg='White')
-lFontsize.pack(side = LEFT, padx=5)
-text_fontsize = IntVar()
-text_fontsize.set(20)
-fontsize = Scale(imagePropertiesArea, variable = text_fontsize,  from_ = 10, to = 40, orient = HORIZONTAL) 
-fontsize.pack(side = LEFT, padx=10)
-
-lArrowKeys = Label(settingsArea, text="Use keys [↑][↓][→][←] to move the text. Press shift for slow move", bg=BG_SETTINGS, fg='White')
-lArrowKeys.grid(row=2, columnspan=3, pady=10)
-
-# USER BUTTONS
-
-def save_image():
-    x = Canvas.winfo_rootx(canvas)
-    y = Canvas.winfo_rooty(canvas)
-    w = Canvas.winfo_width(canvas) 
-    h = Canvas.winfo_height(canvas)
-    
-    path, filename = os.path.split(currentFile.get())
-    targetFile = os.path.join(path, ("new_" if overwrite_file.get() == 0 else "") + filename )
-    ImageGrab.grab((x, y, x+w, y+h)).save(targetFile)
+    def __init__(self, master):
         
-save_button = Button(settingsArea, text="SAVE IMAGE", bg="black", fg="white", command=save_image)
-save_button.grid(row=3, column=1, pady=10)
-overwrite_file = IntVar()
-overwrite_file.set(0)
-overwrite_file_cb = Checkbutton(settingsArea, text='Overwrite file', bg=BG_SETTINGS,
-    variable = overwrite_file, onvalue = 1, offvalue = 0, state="normal")
-overwrite_file_cb.grid(row=3, column=2, pady=10)
+        # Create labels, entries,buttons
+        self.master = master
+        self.master.title('ADD TEXT TO AN IMAGE')
+        self.master.geometry('700x700')
+        self.master.config(bg='grey')
 
-# LISTENERS
+        self.currentImgFile = None
 
-text_to_add.trace("w", lambda name, index,mode, var=text_to_add: update_text(text_to_add))
-angleOfRotation.trace("w", lambda name, index,mode, var=angleOfRotation: update_text(angleOfRotation))
-text_fontsize.trace("w", lambda name, index,mode, var=text_fontsize: update_text(text_fontsize))
+        self.annotation_x = IntVar()
+        self.annotation_x.set(150)
+        self.annotation_y = IntVar()
+        self.annotation_y.set(100)
+
+        self.canvas = Canvas(master, width=600, height=400, bd=0)
+        self.canvas.configure(bg='#333333')
+        self.textAddedWidget = self.canvas.create_text(200, 150, text="DRAG IMAGE HERE", anchor="nw", fill='red', font='calibri 20 bold')
+        self.canvas.pack(fill=None, expand=False, pady=10)
+
+        self.canvas.drop_target_register(DND_FILES)
+        self.canvas.dnd_bind('<<Drop>>', self.DropImage)
 
 
-def MoveSpeed(x,y):
-   global textAddedWidget
- 
-   dx = x + (0 if is_shift_pressed else x)
-   dy = y + (0 if is_shift_pressed else y)
-   canvas.move(textAddedWidget, dx, dy )
- 
-def left(e):
-   MoveSpeed(-10,0)
-      
-def right(e):
-    MoveSpeed(10,0)
+        # USER SETTINGS AREA
 
-def up(e):
-    MoveSpeed(0,-10)
-   
-def down(e):
-    MoveSpeed(0,10)
+        self.settingsArea = Frame(master, bg=self.DEFAULT_BG_SETTINGS)
+        self.settingsArea.pack() 
 
-def shift_press(event):
-    global is_shift_pressed
-    if event.keysym in SHIFT_KEYS:
-        is_shift_pressed = True
+        # USER TEXT
+        self.annotation = StringVar()
 
-def shift_release(event):
-    global is_shift_pressed
-    if event.keysym in SHIFT_KEYS:
-        is_shift_pressed = False
+        self.lText = Label(self.settingsArea, text="TEXT", bg=self.DEFAULT_BG_SETTINGS, fg='White')
+        self.lText.grid(row=0,column=0 , padx=10)
+        self.AnnotationEntry = Entry(self.settingsArea, width=30, fg='blue', font=("calibri", 18), textvariable=self.annotation)
+        self.AnnotationEntry.insert(0, self.DEFAULT_TEXT)
+        self.AnnotationEntry.grid(row=0,column=1 , padx=10, pady=10)
+        self.AnnotationEntry.bind("<FocusIn>", self.UpdateText)
 
-# Bind the move function
-window.bind("<Left>", left)
-window.bind("<Right>", right)
-window.bind("<Up>", up)
-window.bind("<Down>", down)
-window.bind("<KeyPress>", shift_press)
-window.bind("<KeyRelease>", shift_release)
+        # USER IMAGE PARAMS
 
-window.mainloop()
+        self.imagePropertiesArea = Frame(self.settingsArea, bg=self.DEFAULT_BG_SETTINGS)
+        self.imagePropertiesArea.grid(row=1,columnspan=3, padx=30, pady=10)
 
-# https://stackoverflow.com/questions/16424091/why-does-tkinter-image-not-show-up-if-created-in-a-function
+        # USER TEXT COLOR
+        self.annotation_color = StringVar()
+        self.annotation_color.set('red')
+        self.annotation_color.trace("w", lambda name, index,mode, var=self.annotation_color: self.UpdateText())
+
+        self.color_button = Button(self.imagePropertiesArea, text = "Color", command = self.ChooseColor)
+        self.color_button.pack(side = LEFT, padx=20, pady=5)
+
+        # USER TEXT ROTATION
+        self.lRotation = Label(self.imagePropertiesArea, text="Rotation", bg=self.DEFAULT_BG_SETTINGS, fg='White')
+        self.lRotation.pack(side = LEFT, padx=5)
+        self.annotationAngleOfRotation = DoubleVar()
+        self.annotationAngleOfRotation.set(-21)
+        self.rotation_slider = Scale(self.imagePropertiesArea, variable = self.annotationAngleOfRotation, from_ = -90, to = 90, orient = HORIZONTAL) 
+        self.rotation_slider.pack(side = LEFT, padx=20)
+
+        # USER FONT SIZE
+        self.lFontsize = Label(self.imagePropertiesArea, text="Text Size", bg=self.DEFAULT_BG_SETTINGS, fg='White')
+        self.lFontsize.pack(side = LEFT, padx=5)
+        self.annotationFontSize = IntVar()
+        self.annotationFontSize.set(20)
+        self.fontsize = Scale(self.imagePropertiesArea, variable = self.annotationFontSize,  from_ = 10, to = 40, orient = HORIZONTAL) 
+        self.fontsize.pack(side = LEFT, padx=10)
+
+        self.lArrowKeys = Label(self.settingsArea, text="Use keys [↑][↓][→][←] to move the text. Press shift for slow move", bg=self.DEFAULT_BG_SETTINGS, fg='White')
+        self.lArrowKeys.grid(row=2, columnspan=3, pady=10)
+
+        # USER BUTTONS
+
+        self.save_img_button = Button(self.settingsArea, text="SAVE IMAGE", bg="black", fg="white", command=self.save_image)
+        self.save_img_button.grid(row=3, column=1, pady=10)
+        self.overwrite_file = IntVar()
+        self.overwrite_file.set(0)
+        self.overwrite_file_cb = Checkbutton(self.settingsArea, text='Overwrite file', bg=self.DEFAULT_BG_SETTINGS,
+            variable = self.overwrite_file, onvalue = 1, offvalue = 0, state="normal")
+        self.overwrite_file_cb.grid(row=3, column=2, pady=10)
+
+        # LISTENERS
+
+        self.annotation.trace("w", lambda name, index,mode, var=self.annotation: self.UpdateText())
+        self.annotationAngleOfRotation.trace("w", lambda name, index,mode, var=self.annotationAngleOfRotation: self.UpdateText())
+        self.annotationFontSize.trace("w", lambda name, index,mode, var=self.annotationFontSize: self.UpdateText())
+
+        # Bind the move function
+        self.master.bind("<Left>", self.left)
+        self.master.bind("<Right>", self.right)
+        self.master.bind("<Up>", self.up)
+        self.master.bind("<Down>", self.down)
+        self.master.bind("<KeyPress>", self.shift_press)
+        self.master.bind("<KeyRelease>", self.shift_release)
+
+        # First argument is a path to the image to be opened
+        if  len(sys.argv) > 1:
+            fileArg = sys.argv[1]
+            if os.path.isfile(fileArg):
+                self.ShowImage(fileArg)
+
+    def UpdateText(self):
+        self.canvas.itemconfig(self.textAddedWidget, 
+            text= self.annotation.get(),
+            angle=self.annotationAngleOfRotation.get(),
+            fill=self.annotation_color.get(), 
+            font=('calibri', self.fontsize.get(), 'bold'))
+
+    def DropImage(self, event):
+            self.ShowImage(event.data) # droppedItem
+
+    def ShowImage(self, pathToImage):
+
+        self.currentImgFile = pathToImage
+        # ImageTk.PhotoImage can read more formats than the standard PhotoImage
+        self.img = ImageTk.PhotoImage(file = self.currentImgFile) # valid: "./Images/source.png" or "C:\\temp\\F14-01.png"
+
+        # resize canvas to image size
+        self.canvas.config(width=self.img.width(), height=self.img.height())
+
+        canvas_img = self.canvas.create_image(0,0, anchor=NW, image=self.img)
+        # z-order: image must be below foreground elements
+        self.canvas.tag_lower(canvas_img)
+
+        self.UpdateText()
+
+    def save_image(self):
+        x = Canvas.winfo_rootx(self.canvas)
+        y = Canvas.winfo_rooty(self.canvas)
+        w = Canvas.winfo_width(self.canvas) 
+        h = Canvas.winfo_height(self.canvas)
+        
+        if self.currentImgFile == None:
+            path = os.path.dirname(os.path.realpath(__file__))
+            filename = datetime.datetime.now().strftime('image_%Y%m%d-%H%M%S')
+        else:
+            path, filename = os.path.split(self.currentImgFile)
+        targetFile = os.path.join(path, ("new_" if self.overwrite_file.get() == 0 else "") + filename )
+        ImageGrab.grab((x, y, x+w, y+h)).save(targetFile)
+        
+    def ChooseColor(self):
+        color_code = colorchooser.askcolor(title ="Choose a color for the text")
+        self.annotation_color.set(color_code[1])
+
+    def MoveText(self, x,y):
+        dx = x + (0 if self.IS_SHIFT_PRESSED else x)
+        dy = y + (0 if self.IS_SHIFT_PRESSED else y)
+        self.canvas.move(self.textAddedWidget, dx, dy )
+    
+    def left(self, e):
+        self.MoveText(-10,0)
+        
+    def right(self, e):
+        self.MoveText(10,0)
+
+    def up(self, e):
+        self.MoveText(0,-10)
+    
+    def down(self, e):
+        self.MoveText(0,10)
+
+    def shift_press(self, event):
+        if event.keysym in self.SHIFT_KEYS:
+            self.IS_SHIFT_PRESSED = True
+
+    def shift_release(self, event):
+        if event.keysym in self.SHIFT_KEYS:
+            self.IS_SHIFT_PRESSED = False
+
+def main():
+    guiRoot = TkinterDnD.Tk()
+    app = App(guiRoot)
+    guiRoot.mainloop()
+
+if __name__ == '__main__':
+    main()    
