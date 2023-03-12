@@ -11,27 +11,28 @@ To annotate an image with a text that can be modified, resized, rotated, coloriz
 My wife use it to annotate pictures of her clothes for Vinted…  
 
 Usage:
-
+>image_annotation_tool.py
+>image_annotation_tool.py <path_to_image>
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __author__ = "Nicols Guinet <nguinet.pro AT gmail.com>"
 
 class App:
 
-    DEFAULT_TEXT = "Offert pour tout achat"
-    DEFAULT_BG_SETTINGS = '#555555'
+    DEFAULT_TEXT = "Free with any purchase"
+    DEFAULT_BG_SETTINGS = 'grey0'
     SHIFT_KEYS = {"Shift_L", "Shift_R"}
     IS_SHIFT_PRESSED = False
 
     def __init__(self, master):
         
-        # Create labels, entries,buttons
+        master.title('ADD TEXT TO AN IMAGE')
+        master.geometry('700x700')
+        master.config(bg=self.DEFAULT_BG_SETTINGS)
         self.master = master
-        self.master.title('ADD TEXT TO AN IMAGE')
-        self.master.geometry('700x700')
-        self.master.config(bg='grey')
-
+        
+        # Create labels, entries,buttons
         self.currentImgFile = None
 
         self.annotation_x = IntVar()
@@ -50,22 +51,21 @@ class App:
 
         # USER SETTINGS AREA
 
-        self.settingsArea = Frame(master, bg=self.DEFAULT_BG_SETTINGS)
-        self.settingsArea.pack() 
+        self.controlZone = Frame(master, bg=self.DEFAULT_BG_SETTINGS)
+        self.controlZone.pack() 
 
         # USER TEXT
         self.annotation = StringVar()
 
-        self.lText = Label(self.settingsArea, text="TEXT", bg=self.DEFAULT_BG_SETTINGS, fg='White')
+        self.lText = Label(self.controlZone, text="TEXT", bg=self.DEFAULT_BG_SETTINGS, fg='White')
         self.lText.grid(row=0,column=0 , padx=10)
-        self.AnnotationEntry = Entry(self.settingsArea, width=30, fg='blue', font=("calibri", 18), textvariable=self.annotation)
+        self.AnnotationEntry = Entry(self.controlZone, width=30, fg='black', font=("calibri", 18), textvariable=self.annotation)
         self.AnnotationEntry.insert(0, self.DEFAULT_TEXT)
         self.AnnotationEntry.grid(row=0,column=1 , padx=10, pady=10)
-        self.AnnotationEntry.bind("<FocusIn>", self.UpdateText)
 
         # USER IMAGE PARAMS
 
-        self.imagePropertiesArea = Frame(self.settingsArea, bg=self.DEFAULT_BG_SETTINGS)
+        self.imagePropertiesArea = Frame(self.controlZone, bg=self.DEFAULT_BG_SETTINGS)
         self.imagePropertiesArea.grid(row=1,columnspan=3, padx=30, pady=10)
 
         # USER TEXT COLOR
@@ -73,7 +73,7 @@ class App:
         self.annotation_color.set('red')
         self.annotation_color.trace("w", lambda name, index,mode, var=self.annotation_color: self.UpdateText())
 
-        self.color_button = Button(self.imagePropertiesArea, text = "Color", command = self.ChooseColor)
+        self.color_button = Button(self.imagePropertiesArea, text = "COLOR", bg="black", fg="white", command = self.ChooseColor)
         self.color_button.pack(side = LEFT, padx=20, pady=5)
 
         # USER TEXT ROTATION
@@ -92,26 +92,28 @@ class App:
         self.fontsize = Scale(self.imagePropertiesArea, variable = self.annotationFontSize,  from_ = 10, to = 40, orient = HORIZONTAL) 
         self.fontsize.pack(side = LEFT, padx=10)
 
-        self.lArrowKeys = Label(self.settingsArea, text="Use keys [↑][↓][→][←] to move the text. Press shift for slow move", bg=self.DEFAULT_BG_SETTINGS, fg='White')
+        self.lArrowKeys = Label(self.controlZone, text="Use keys [↑ ↓ → ←] to move the text. Press [shift] for slow move", font=("Arial", 15), bg=self.DEFAULT_BG_SETTINGS, fg='Yellow')
         self.lArrowKeys.grid(row=2, columnspan=3, pady=10)
 
         # USER BUTTONS
 
-        self.save_img_button = Button(self.settingsArea, text="SAVE IMAGE", bg="black", fg="white", command=self.save_image)
+        self.save_img_button = Button(self.controlZone, text="SAVE IMAGE", bg="black", fg="white", command=self.save_image)
         self.save_img_button.grid(row=3, column=1, pady=10)
         self.overwrite_file = IntVar()
         self.overwrite_file.set(0)
-        self.overwrite_file_cb = Checkbutton(self.settingsArea, text='Overwrite file', bg=self.DEFAULT_BG_SETTINGS,
-            variable = self.overwrite_file, onvalue = 1, offvalue = 0, state="normal")
+        self.overwrite_file_cb = Checkbutton(self.controlZone, text='Overwrite file',
+                                             bg=self.DEFAULT_BG_SETTINGS,
+                                             variable = self.overwrite_file, onvalue = 1, offvalue = 0, state="normal",                                             
+                                             fg='white', activebackground='black', activeforeground='white',selectcolor="black")
         self.overwrite_file_cb.grid(row=3, column=2, pady=10)
 
-        # LISTENERS
+        # LISTENERS: update text when text changes, text is rotated or text is resized
 
-        self.annotation.trace("w", lambda name, index,mode, var=self.annotation: self.UpdateText())
+        self.annotation.trace("w", lambda name, index, mode, var=self.annotation: self.UpdateText())
         self.annotationAngleOfRotation.trace("w", lambda name, index,mode, var=self.annotationAngleOfRotation: self.UpdateText())
         self.annotationFontSize.trace("w", lambda name, index,mode, var=self.annotationFontSize: self.UpdateText())
 
-        # Bind the move function
+        # Bind the text move functions
         self.master.bind("<Left>", self.left)
         self.master.bind("<Right>", self.right)
         self.master.bind("<Up>", self.up)
@@ -119,6 +121,9 @@ class App:
         self.master.bind("<KeyPress>", self.shift_press)
         self.master.bind("<KeyRelease>", self.shift_release)
 
+        self.checkArgs()
+
+    def checkArgs(self):
         # First argument is a path to the image to be opened
         if  len(sys.argv) > 1:
             fileArg = sys.argv[1]
@@ -138,7 +143,7 @@ class App:
     def ShowImage(self, pathToImage):
 
         self.currentImgFile = pathToImage
-        # ImageTk.PhotoImage can read more formats than the standard PhotoImage
+        # ImageTk.PhotoImage(…) can read more image formats than the standard TKinter PhotoImage(…)
         self.img = ImageTk.PhotoImage(file = self.currentImgFile) # valid: "./Images/source.png" or "C:\\temp\\F14-01.png"
 
         # resize canvas to image size
@@ -157,8 +162,9 @@ class App:
         h = Canvas.winfo_height(self.canvas)
         
         if self.currentImgFile == None:
+            # No image loaded → create 'image_%Y%m%d-%H%M%S.png'
             path = os.path.dirname(os.path.realpath(__file__))
-            filename = datetime.datetime.now().strftime('image_%Y%m%d-%H%M%S')
+            filename = datetime.datetime.now().strftime('image_%Y%m%d-%H%M%S.png')
         else:
             path, filename = os.path.split(self.currentImgFile)
         targetFile = os.path.join(path, ("new_" if self.overwrite_file.get() == 0 else "") + filename )

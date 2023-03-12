@@ -7,7 +7,9 @@ My wife use it to annotate pictures of her clothes for Vinted…
 
 ## Requirements
 
-Python 3.8
+- Python 3.8>=
+- Pillow: to import larger image formats
+- tkinterdnd2 : for drag and drop
 
 ## Install
 
